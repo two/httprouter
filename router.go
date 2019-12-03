@@ -420,14 +420,16 @@ func (r *Router) allowed(path, reqMethod string) (allow string) {
 // ServeHTTP makes the router implement the http.Handler interface.
 func (r *Router) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 	if r.PanicHandler != nil {
-		defer r.recv(w, req)
+		defer r.recv(w, req) // 处理 panic
 	}
 
 	path := req.URL.Path
 
 	if root := r.trees[req.Method]; root != nil {
+		// 查找 handle
 		if handle, ps, tsr := root.getValue(path, r.getParams); handle != nil {
 			if ps != nil {
+				// 调用函数处理，并传参
 				handle(w, req, *ps)
 				r.putParams(ps)
 			} else {
@@ -435,6 +437,7 @@ func (r *Router) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 			}
 			return
 		} else if req.Method != http.MethodConnect && path != "/" {
+			// 是否需要重定向
 			// Moved Permanently, request with GET method
 			code := http.StatusMovedPermanently
 			if req.Method != http.MethodGet {
@@ -453,6 +456,7 @@ func (r *Router) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 			}
 
 			// Try to fix the request path
+			// 大小写的处理
 			if r.RedirectFixedPath {
 				fixedPath, found := root.findCaseInsensitivePath(
 					CleanPath(path),
@@ -469,6 +473,7 @@ func (r *Router) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 
 	if req.Method == http.MethodOptions && r.HandleOPTIONS {
 		// Handle OPTIONS requests
+		// 处理 OPTIONS 请求
 		if allow := r.allowed(path, http.MethodOptions); allow != "" {
 			w.Header().Set("Allow", allow)
 			if r.GlobalOPTIONS != nil {
